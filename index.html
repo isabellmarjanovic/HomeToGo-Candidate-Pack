@@ -1,0 +1,1293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>HomeToGo Group · 3D Interactive Candidate Booklet</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Phosphor Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            serif: ['"Playfair Display"', 'serif'],
+          },
+          colors: {
+            htg: {
+              night: '#0F051D',
+              eggplant: '#1A0933',
+              dark: '#240B45',
+              deep: '#2D1152',
+              purple: '#5B2196',
+              electric: '#7928CA',
+              lilac: '#A855F7',
+              lavender: '#F5EEFB',
+              paper: '#FAF6FE',
+              gold: '#F59E0B',
+              goldDark: '#B45309',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    :root {
+      --book-width: 380px;
+      --book-height: 560px;
+      --leaf-width: 380px;
+      --flip-speed: 0.85s;
+    }
+
+    .viewport-container {
+      min-height: 100vh;
+      min-height: 100dvh;
+    }
+
+    .book-stage {
+      perspective: 2000px;
+      perspective-origin: 50% 50%;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: visible;
+    }
+
+    @media (min-width: 860px) {
+      .book-wrapper {
+        position: relative;
+        width: calc(var(--leaf-width) * 2);
+        height: var(--book-height);
+        transform-style: preserve-3d;
+        transition: transform 0.75s cubic-bezier(0.25, 1, 0.5, 1);
+      }
+      .book-wrapper.is-closed {
+        transform: translateX(calc(var(--leaf-width) * -0.5));
+      }
+      .book-wrapper.is-open {
+        transform: translateX(0);
+      }
+      .book-wrapper.is-back-closed {
+        transform: translateX(calc(var(--leaf-width) * 0.5));
+      }
+
+      .book-leaf {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: var(--leaf-width);
+        height: 100%;
+        transform-origin: left center;
+        transform-style: preserve-3d;
+        transition: transform var(--flip-speed) cubic-bezier(0.3, 0.05, 0.2, 1);
+        cursor: pointer;
+      }
+      .book-spine-crease {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 50%;
+        width: 36px;
+        transform: translateX(-50%) translateZ(4px);
+        background: linear-gradient(90deg, 
+          rgba(0,0,0,0.35) 0%, 
+          rgba(0,0,0,0.12) 35%, 
+          rgba(255,255,255,0.06) 50%, 
+          rgba(0,0,0,0.12) 65%, 
+          rgba(0,0,0,0.35) 100%
+        );
+        z-index: 60;
+        pointer-events: none;
+        mix-blend-mode: multiply;
+      }
+    }
+
+    @media (max-width: 859px) {
+      :root {
+        --book-width: min(calc(100vw - 20px), 380px);
+        --book-height: min(calc(100dvh - 128px), 570px);
+        --leaf-width: var(--book-width);
+      }
+
+      .book-stage {
+        perspective: 1600px;
+        padding: 0 4px;
+      }
+
+      .book-wrapper {
+        position: relative;
+        width: var(--book-width) !important;
+        height: var(--book-height) !important;
+        transform-style: preserve-3d;
+        transform: none !important;
+        margin: 0 auto;
+      }
+
+      .book-spine-crease {
+        display: none !important;
+      }
+
+      .book-leaf {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        transform-origin: left center;
+        transform-style: preserve-3d;
+        transition: transform var(--flip-speed) cubic-bezier(0.3, 0.05, 0.2, 1);
+        cursor: pointer;
+      }
+    }
+
+    .mobile-frame-mode {
+      max-width: 390px !important;
+      margin: 0 auto;
+    }
+    .mobile-frame-mode .book-wrapper {
+      width: 350px !important;
+      height: 540px !important;
+      transform: none !important;
+    }
+    .mobile-frame-mode .book-spine-crease {
+      display: none !important;
+    }
+    .mobile-frame-mode .book-leaf {
+      position: absolute;
+      inset: 0;
+      width: 100% !important;
+      height: 100% !important;
+      transform-origin: left center;
+      transform-style: preserve-3d;
+      transition: transform var(--flip-speed) cubic-bezier(0.3, 0.05, 0.2, 1);
+    }
+
+    .phone-mode-active .book-leaf {
+      transform-origin: left center;
+    }
+    .phone-mode-active .book-leaf.leaf-turned {
+      transform: rotateY(-180deg);
+    }
+    .phone-mode-active .book-leaf.leaf-hidden {
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    body:not(.phone-mode-active) .book-leaf.flipped {
+      transform: rotateY(-180deg);
+    }
+
+    .book-surface-shadow {
+      position: absolute;
+      top: 15px;
+      left: 10px;
+      right: 10px;
+      bottom: -18px;
+      background: radial-gradient(ellipse at 50% 50%, rgba(15, 5, 29, 0.75) 0%, rgba(15, 5, 29, 0) 70%);
+      filter: blur(12px);
+      z-index: 1;
+      transform: translateZ(-20px);
+      pointer-events: none;
+    }
+
+    .leaf-face {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      overflow-y: auto;
+      overflow-x: hidden;
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-overflow-scrolling: touch;
+      border-radius: 12px;
+    }
+
+    .leaf-front {
+      box-shadow: inset 14px 0 20px -10px rgba(0,0,0,0.18), 0 8px 24px rgba(0,0,0,0.12);
+    }
+
+    .leaf-back {
+      transform: rotateY(180deg);
+      box-shadow: inset -14px 0 20px -10px rgba(0,0,0,0.18), 0 8px 24px rgba(0,0,0,0.12);
+    }
+
+    .leaf-shade {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, rgba(36, 11, 69, 0.45) 0%, rgba(0,0,0,0) 50%);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.45s ease;
+      z-index: 40;
+      border-radius: 12px;
+    }
+    .book-leaf.turning .leaf-shade {
+      opacity: 1;
+    }
+
+    .curl-hint {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, transparent 48%, rgba(121, 40, 202, 0.28) 50%, rgba(255, 255, 255, 0.6) 60%, transparent 62%);
+      border-bottom-right-radius: 12px;
+      pointer-events: auto;
+      transition: transform 0.25s ease, filter 0.25s ease;
+    }
+    .curl-hint:hover {
+      transform: scale(1.2) translate(-2px, -2px);
+      filter: drop-shadow(-3px -3px 5px rgba(91, 33, 150, 0.4));
+    }
+
+    .leaf-face::-webkit-scrollbar {
+      width: 3px;
+    }
+    .leaf-face::-webkit-scrollbar-thumb {
+      background: rgba(91, 33, 150, 0.35);
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+
+<body class="bg-htg-night text-slate-800 viewport-container flex flex-col font-sans select-none overflow-x-hidden antialiased">
+
+  <!-- TOP BAR -->
+  <header class="bg-htg-eggplant/90 border-b border-htg-purple/30 backdrop-blur-md px-3 sm:px-4 py-2 z-50 text-white flex items-center justify-between sticky top-0 shadow-xl">
+    <div class="flex items-center space-x-2.5">
+      <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-gradient-to-tr from-htg-deep via-htg-purple to-htg-electric flex items-center justify-center font-black text-white shadow-md border border-purple-300/30 flex-shrink-0">
+        <span class="text-xs sm:text-sm tracking-tighter font-extrabold">H</span>
+      </div>
+      <div class="min-w-0">
+        <div class="flex items-center space-x-1.5">
+          <span class="text-[8px] sm:text-[9px] font-extrabold tracking-wider uppercase text-htg-lilac bg-htg-dark px-1.5 py-0.5 rounded border border-purple-500/30">Mobile Pack</span>
+          <span class="text-[9px] text-purple-200/70 hidden md:inline">HomeToGo Group</span>
+        </div>
+        <p class="text-[11px] sm:text-xs font-semibold text-white truncate max-w-[130px] sm:max-w-xs leading-tight">
+          <span class="dynCandidateName">Alex Taylor</span> · <span class="dynRoleTitle text-purple-200/80 font-normal">Senior PM</span>
+        </p>
+      </div>
+    </div>
+
+    <!-- Quick Utilities -->
+    <div class="flex items-center space-x-1.5 sm:space-x-2">
+      <button id="viewToggleBtn" onclick="toggleViewportMode()" class="px-2.5 py-1 sm:py-1.5 rounded-lg sm:rounded-xl bg-htg-dark/80 hover:bg-htg-purple text-purple-200 hover:text-white border border-purple-500/30 transition text-[10px] sm:text-xs font-semibold flex items-center space-x-1" title="Switch between Phone & Spread modes">
+        <i id="viewToggleIcon" class="ph-bold ph-device-mobile"></i>
+        <span id="viewToggleLabel" class="hidden sm:inline">Phone Mode</span>
+      </button>
+
+      <button id="soundBtn" onclick="toggleSound()" class="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-htg-dark/80 hover:bg-htg-purple text-purple-200 hover:text-white border border-purple-500/30 transition shadow-sm" title="Toggle Page Flip Sound">
+        <i id="soundIcon" class="ph-bold ph-speaker-high text-xs"></i>
+      </button>
+
+      <button onclick="togglePersonalizer()" class="flex items-center space-x-1 px-2.5 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-semibold bg-gradient-to-r from-htg-purple to-htg-electric hover:from-purple-600 hover:to-htg-lilac text-white shadow-md transition">
+        <i class="ph-bold ph-sliders-horizontal text-xs"></i>
+        <span>Personalize</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- QUICK PERSONALIZER DRAWER -->
+  <div id="personalizeDrawer" class="hidden bg-htg-dark border-b border-htg-purple/40 p-3 sm:p-4 text-white z-50 shadow-2xl transition-all">
+    <div class="max-w-4xl mx-auto">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-htg-lilac flex items-center">
+          <i class="ph-bold ph-sparkle mr-1.5"></i> Instant Recruiter Personalizer
+        </span>
+        <button onclick="togglePersonalizer()" class="text-purple-300 hover:text-white text-xs">
+          <i class="ph-bold ph-x"></i>
+        </button>
+      </div>
+      
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
+        <div>
+          <label class="block text-[9px] font-semibold text-purple-200/80 mb-0.5">Candidate Name</label>
+          <input type="text" id="inpCandidate" value="Alex Taylor" oninput="handlePersonalize()"
+                 class="w-full text-xs px-2 py-1 rounded bg-htg-deep/90 border border-purple-500/40 text-white focus:outline-none focus:border-htg-electric">
+        </div>
+        <div>
+          <label class="block text-[9px] font-semibold text-purple-200/80 mb-0.5">Target Role</label>
+          <input type="text" id="inpRole" value="Senior Product Manager" oninput="handlePersonalize()"
+                 class="w-full text-xs px-2 py-1 rounded bg-htg-deep/90 border border-purple-500/40 text-white focus:outline-none focus:border-htg-electric">
+        </div>
+        <div>
+          <label class="block text-[9px] font-semibold text-purple-200/80 mb-0.5">Hiring Manager</label>
+          <input type="text" id="inpHM" value="Elena Rossi, VP Product" oninput="handlePersonalize()"
+                 class="w-full text-xs px-2 py-1 rounded bg-htg-deep/90 border border-purple-500/40 text-white focus:outline-none focus:border-htg-electric">
+        </div>
+        <div>
+          <label class="block text-[9px] font-semibold text-purple-200/80 mb-0.5">Recruiter Name</label>
+          <input type="text" id="inpRecruiter" value="Sarah Jenkins" oninput="handlePersonalize()"
+                 class="w-full text-xs px-2 py-1 rounded bg-htg-deep/90 border border-purple-500/40 text-white focus:outline-none focus:border-htg-electric">
+        </div>
+      </div>
+
+      <!-- Copy Candidate Link Button -->
+      <div class="mt-3 pt-2.5 border-t border-purple-500/30 flex items-center justify-between">
+        <button onclick="copyCandidateUrl()" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-htg-purple to-htg-electric hover:from-purple-600 hover:to-htg-lilac text-white text-xs font-semibold flex items-center gap-1.5 transition shadow-md">
+          <i class="ph-bold ph-link-simple"></i>
+          <span>Copy Shareable Candidate Link</span>
+        </button>
+        <span id="copyFeedback" class="text-xs text-emerald-400 font-semibold hidden flex items-center gap-1">
+          <i class="ph-bold ph-check"></i> Link copied to clipboard!
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN 3D FLIPBOOK VIEWPORT -->
+  <main id="mainContainer" class="flex-1 flex flex-col items-center justify-center p-2 sm:p-4 relative overflow-hidden">
+
+    <div class="absolute -top-32 -left-20 w-80 h-80 bg-htg-purple/20 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="absolute -bottom-32 -right-20 w-80 h-80 bg-htg-electric/20 rounded-full blur-3xl pointer-events-none"></div>
+
+    <div class="book-stage w-full flex items-center justify-center my-auto py-1">
+      <div id="bookWrapper" class="book-wrapper is-closed">
+
+        <div class="book-surface-shadow"></div>
+        <div class="book-spine-crease"></div>
+
+        <!-- LEAF 1: Front: Cover (Page 1) / Back: Recruiter Note (Page 2) -->
+        <div id="leaf1" class="book-leaf" style="z-index: 4;" onclick="handleLeafClick(1, event)">
+          <div class="leaf-shade"></div>
+
+          <!-- Page 1: Cover -->
+          <div class="leaf-face leaf-front bg-gradient-to-br from-htg-eggplant via-htg-deep to-htg-dark text-white p-5 sm:p-6 flex flex-col justify-between border-r-2 border-purple-400/20 relative overflow-hidden">
+            <div class="absolute inset-0 opacity-15 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:14px_14px] pointer-events-none"></div>
+
+            <div class="relative z-10">
+              <div class="flex items-center justify-between">
+                <span class="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-white/10 backdrop-blur-md border border-purple-300/30 text-[9px] font-bold tracking-widest uppercase text-htg-lilac">
+                  <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                  <span>HomeToGo Group</span>
+                </span>
+                <span class="text-[9px] tracking-wider uppercase text-purple-300/60 font-mono">Edition 2026</span>
+              </div>
+
+              <div class="mt-4 sm:mt-5">
+                <p class="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-amber-400 flex items-center gap-1.5">
+                  <i class="ph-fill ph-check-circle"></i> Recruiter Screen Passed
+                </p>
+                <h1 class="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight text-white mt-1.5 leading-tight">
+                  Congrats, you’re through to the next round
+                </h1>
+                <p class="text-[10px] sm:text-xs text-purple-200/80 mt-1.5 font-normal leading-snug">
+                  Everything you need for your conversation with the hiring manager, gathered in one place.
+                </p>
+              </div>
+            </div>
+
+            <div class="relative z-10 my-2 rounded-xl overflow-hidden border border-purple-300/30 shadow-md h-24 relative group">
+              <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80" 
+                   alt="Modern European Vacation Home" 
+                   class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+              <div class="absolute inset-0 bg-gradient-to-t from-htg-night/90 via-htg-night/35 to-transparent flex items-end p-2.5">
+                <span class="text-[9px] sm:text-[10px] text-purple-200 font-medium flex items-center gap-1 leading-tight">
+                  <i class="ph-bold ph-house-line text-amber-400"></i> Unlocking better stays for over 15 million travelers every year
+                </span>
+              </div>
+            </div>
+
+            <div class="relative z-10 bg-white/10 backdrop-blur-md rounded-xl p-3 border border-purple-300/30 shadow-lg">
+              <div class="text-sm sm:text-base font-bold text-white dynCandidateName">Alex Taylor</div>
+              <div class="text-[11px] sm:text-xs text-purple-200 dynRoleTitle font-medium mt-0.5">Senior Product Manager</div>
+              <div class="mt-2 pt-2 border-t border-white/10 flex items-center justify-between text-[9px] text-purple-200/80">
+                <span class="text-emerald-300 font-semibold flex items-center">
+                  <i class="ph-bold ph-arrow-right mr-1"></i> Stage 2 Next
+                </span>
+                <span class="text-amber-200/90 font-medium">Tap right edge to open</span>
+              </div>
+            </div>
+
+            <div class="relative z-10 flex items-center justify-between text-[10px] text-purple-300/70 pt-1">
+              <span class="text-amber-400 font-medium flex items-center gap-1">
+                <i class="ph-bold ph-book-open"></i> Tap or Swipe to Turn
+              </span>
+              <span class="font-bold">Cover</span>
+            </div>
+
+            <div class="curl-hint" title="Click to open book"></div>
+          </div>
+
+          <!-- Page 2: Recruiter Note -->
+          <div class="leaf-face leaf-back bg-htg-paper text-slate-800 p-5 sm:p-6 flex flex-col justify-between border-l border-purple-200">
+            <div>
+              <div class="flex items-center justify-between border-b border-purple-100 pb-2 mb-3">
+                <span class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-htg-purple flex items-center gap-1">
+                  <i class="ph-bold ph-envelope-simple"></i> Direct Introduction
+                </span>
+                <span class="text-[10px] text-slate-400 font-semibold">Page 2</span>
+              </div>
+
+              <h2 class="text-lg sm:text-xl font-bold text-htg-deep leading-tight">
+                A note from your recruiter
+              </h2>
+
+              <div class="mt-3 text-xs text-slate-700 space-y-2.5 leading-relaxed">
+                <p class="font-semibold text-htg-deep text-sm">
+                  Hello <span class="dynCandidateFirstName text-htg-purple font-bold">Alex</span>,
+                </p>
+                <p>
+                  Thank you for the time you gave us in your first conversation. We enjoyed it, and we’d like you to meet <strong class="text-htg-deep dynHMName">Elena Rossi</strong>, who leads the team you’d join.
+                </p>
+                <p>
+                  Inside you’ll find who we are, how the next stages work, and what helps people do well. <strong>None of it is a test.</strong> Skim what you already know, and send me any question that comes up!
+                </p>
+              </div>
+
+              <div class="mt-5 pt-3 border-t border-purple-100">
+                <p class="text-xs text-slate-600 font-medium">Best,</p>
+                <h4 class="text-sm font-bold text-htg-deep dynRecruiterName mt-0.5">Sarah Jenkins</h4>
+                <p class="text-[11px] text-purple-700 font-medium">Talent Acquisition, HomeToGo Group</p>
+              </div>
+            </div>
+
+            <div class="pt-2 border-t border-purple-100 flex items-center justify-between text-[10px] text-slate-400">
+              <span class="text-purple-600 font-semibold cursor-pointer" onclick="prevLeaf(event)">← Back to Cover</span>
+              <span>2 of 8</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- LEAF 2: Front: Who We Are (Page 3) / Back: Our Brands (Page 4) -->
+        <div id="leaf2" class="book-leaf" style="z-index: 3;" onclick="handleLeafClick(2, event)">
+          <div class="leaf-shade"></div>
+
+          <!-- Page 3: Who We Are (Journey stretched to bottom) -->
+          <div class="leaf-face leaf-front bg-htg-paper text-slate-800 p-4 sm:p-5 flex flex-col justify-between border-r border-purple-200 h-full">
+            <div class="flex-1 flex flex-col min-h-0">
+              <div class="flex items-center justify-between border-b border-purple-100 pb-1.5 mb-2">
+                <span class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-htg-purple flex items-center gap-1">
+                  <i class="ph-bold ph-globe"></i> Group Overview
+                </span>
+                <span class="text-[10px] text-slate-400 font-semibold">Page 3</span>
+              </div>
+
+              <h2 class="text-base sm:text-lg font-bold text-htg-deep leading-tight">Three businesses, one group</h2>
+              <p class="text-[10px] text-slate-500 mb-2">Europe's vacation rentals powerhouse</p>
+
+              <div class="space-y-1.5 text-xs mb-2.5">
+                <div class="p-1.5 rounded-lg bg-white border border-purple-100 shadow-sm flex items-center space-x-2">
+                  <img src="https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=120&q=80" 
+                       alt="Marketplace Rental" 
+                       class="w-8 h-8 rounded-md object-cover flex-shrink-0 border border-purple-100">
+                  <div class="min-w-0 flex-1">
+                    <div class="flex items-center space-x-1 text-[8px] font-extrabold uppercase text-htg-purple">
+                      <i class="ph-bold ph-magnifying-glass"></i>
+                      <span>Marketplace · HomeToGo</span>
+                    </div>
+                    <p class="text-[9px] text-slate-600 leading-tight">
+                      30+ countries. <strong>15M+ travelers</strong> use our marketplace annually.
+                    </p>
+                  </div>
+                </div>
+
+                <div class="p-1.5 rounded-lg bg-white border border-purple-100 shadow-sm flex items-center space-x-2">
+                  <img src="https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=120&q=80" 
+                       alt="SaaS tools" 
+                       class="w-8 h-8 rounded-md object-cover flex-shrink-0 border border-purple-100">
+                  <div class="min-w-0 flex-1">
+                    <div class="flex items-center space-x-1 text-[8px] font-extrabold uppercase text-htg-electric">
+                      <i class="ph-bold ph-laptop"></i>
+                      <span>Software · Smoobu & secra</span>
+                    </div>
+                    <p class="text-[9px] text-slate-600 leading-tight">
+                      Smoobu for independent hosts; secra bookings for agencies.
+                    </p>
+                  </div>
+                </div>
+
+                <div class="p-1.5 rounded-lg bg-white border border-purple-100 shadow-sm flex items-center space-x-2">
+                  <img src="https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=120&q=80" 
+                       alt="Property services" 
+                       class="w-8 h-8 rounded-md object-cover flex-shrink-0 border border-purple-100">
+                  <div class="min-w-0 flex-1">
+                    <div class="flex items-center space-x-1 text-[8px] font-extrabold uppercase text-emerald-700">
+                      <i class="ph-bold ph-house"></i>
+                      <span>Services · Interhome</span>
+                    </div>
+                    <p class="text-[9px] text-slate-600 leading-tight">
+                      Interhome manages <strong>70,000+ homes</strong> with on-site host care.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Our Journey Expanded to Bottom -->
+              <div class="flex-1 bg-htg-deep text-white rounded-xl p-3 flex flex-col justify-between shadow-inner">
+                <div class="flex items-center justify-between border-b border-purple-700/60 pb-1 mb-1">
+                  <span class="text-[9px] font-extrabold uppercase tracking-wider text-amber-300 flex items-center gap-1">
+                    <i class="ph-bold ph-trend-up"></i> Our Journey
+                  </span>
+                  <span class="text-[8px] text-purple-200/80 font-mono">2014 – Today</span>
+                </div>
+
+                <div class="flex-1 flex flex-col justify-between py-1 border-l-2 border-purple-600/50 ml-1.5 pl-2.5 text-[9px] space-y-1">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                      <span class="w-1.5 h-1.5 rounded-full bg-amber-400 -ml-[13px] ring-2 ring-htg-deep"></span>
+                      <strong class="text-amber-300 font-extrabold text-[10px]">2014</strong>
+                      <span class="text-purple-100">Founded in Berlin</span>
+                    </div>
+                    <span class="text-[8px] text-purple-300/70 bg-white/5 px-1 rounded">Origin</span>
+                  </div>
+
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                      <span class="w-1.5 h-1.5 rounded-full bg-amber-400 -ml-[13px] ring-2 ring-htg-deep"></span>
+                      <strong class="text-amber-300 font-extrabold text-[10px]">2017</strong>
+                      <span class="text-purple-100">Direct marketplace launch</span>
+                    </div>
+                    <span class="text-[8px] text-purple-300/70 bg-white/5 px-1 rounded">Marketplace</span>
+                  </div>
+
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                      <span class="w-1.5 h-1.5 rounded-full bg-amber-400 -ml-[13px] ring-2 ring-htg-deep"></span>
+                      <strong class="text-amber-300 font-extrabold text-[10px]">2021</strong>
+                      <span class="text-purple-100">Frankfurt Stock Exchange IPO</span>
+                    </div>
+                    <span class="text-[8px] text-amber-300/80 bg-amber-400/10 px-1 rounded font-semibold">IPO</span>
+                  </div>
+
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                      <span class="w-1.5 h-1.5 rounded-full bg-amber-400 -ml-[13px] ring-2 ring-htg-deep"></span>
+                      <strong class="text-amber-300 font-extrabold text-[10px]">'21–'22</strong>
+                      <span class="text-purple-100">Smoobu & secra join Group</span>
+                    </div>
+                    <span class="text-[8px] text-purple-300/70 bg-white/5 px-1 rounded">SaaS</span>
+                  </div>
+
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                      <span class="w-1.5 h-1.5 rounded-full bg-amber-400 -ml-[13px] ring-2 ring-htg-deep"></span>
+                      <strong class="text-amber-300 font-extrabold text-[10px]">2025</strong>
+                      <span class="text-purple-100">Interhome joins (70k+ homes)</span>
+                    </div>
+                    <span class="text-[8px] text-purple-300/70 bg-white/5 px-1 rounded">Services</span>
+                  </div>
+
+                  <div class="flex items-center justify-between pt-1 border-t border-purple-700/40">
+                    <div class="flex items-center space-x-2">
+                      <span class="w-2 h-2 rounded-full bg-emerald-400 -ml-[14px] ring-2 ring-htg-deep animate-pulse"></span>
+                      <strong class="text-emerald-300 font-extrabold text-[10px]">Today</strong>
+                      <span class="text-emerald-200 font-bold">1,500+ team members across Europe</span>
+                    </div>
+                    <span class="text-[8px] text-emerald-300 bg-emerald-500/20 px-1.5 py-0.5 rounded-full font-bold">Thriving</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="pt-2 border-t border-purple-100 flex items-center justify-between text-[10px] text-slate-400 mt-2">
+              <span>hometogo.com/about</span>
+              <span>3 of 8</span>
+            </div>
+            <div class="curl-hint"></div>
+          </div>
+
+          <!-- Page 4: Our Brands -->
+          <div class="leaf-face leaf-back bg-htg-paper text-slate-800 p-5 sm:p-6 flex flex-col justify-between border-l border-purple-200">
+            <div>
+              <div class="flex items-center justify-between border-b border-purple-100 pb-2 mb-3">
+                <span class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-htg-purple flex items-center gap-1">
+                  <i class="ph-bold ph-diamonds-four"></i> Ecosystem
+                </span>
+                <span class="text-[10px] text-slate-400 font-semibold">Page 4</span>
+              </div>
+
+              <h2 class="text-base sm:text-lg font-bold text-htg-deep leading-tight">How the Group fits together</h2>
+              <p class="text-[10px] text-slate-500 mb-3">Tailored value across travelers & hosts</p>
+
+              <div class="space-y-2.5 text-xs">
+                <div class="p-3 rounded-xl bg-purple-50/80 border border-purple-200">
+                  <span class="text-[8px] font-extrabold uppercase tracking-wider text-htg-purple block mb-1">For Travelers</span>
+                  <strong class="text-htg-deep block text-xs">Marketplace & GetAway Group</strong>
+                  <p class="text-[10px] text-slate-600 mt-1 leading-snug">HomeToGo (30+ countries), Kurz Mal Weg, Kurzurlaub.</p>
+                </div>
+
+                <div class="p-3 rounded-xl bg-white border border-purple-100 shadow-sm">
+                  <span class="text-[8px] font-extrabold uppercase tracking-wider text-htg-electric block mb-1">For Hosts & Software</span>
+                  <strong class="text-htg-deep block text-xs">HomeToGo_PRO Software</strong>
+                  <p class="text-[10px] text-slate-600 mt-1 leading-snug">Smoobu (independent hosts), secra bookings (agencies & regions), HomeToGo Doppelgänger, my.HomeToGo.</p>
+                </div>
+
+                <div class="p-3 rounded-xl bg-white border border-purple-100 shadow-sm">
+                  <span class="text-[8px] font-extrabold uppercase tracking-wider text-emerald-700 block mb-1">HomeToGo Originals & Services</span>
+                  <strong class="text-htg-deep block text-xs">Full-Service Management</strong>
+                  <p class="text-[10px] text-slate-600 mt-1 leading-snug">Interhome (70k+ homes), Kraushaar (Baltic Coast), and timwork.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="pt-2 border-t border-purple-100 flex items-center justify-between text-[10px] text-slate-400">
+              <span class="text-purple-600 font-semibold cursor-pointer" onclick="prevLeaf(event)">← Previous Page</span>
+              <span>4 of 8</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- LEAF 3: Front: Leadership Principles (Page 5) / Back: Interview Journey (Page 6) -->
+        <div id="leaf3" class="book-leaf" style="z-index: 2;" onclick="handleLeafClick(3, event)">
+          <div class="leaf-shade"></div>
+
+          <!-- Page 5: Leadership Principles (Spread out) -->
+          <div class="leaf-face leaf-front bg-htg-paper text-slate-800 p-4 sm:p-5 flex flex-col justify-between border-r border-purple-200 h-full">
+            <div class="flex-1 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between border-b border-purple-100 pb-1.5 mb-2">
+                  <span class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-htg-purple flex items-center gap-1">
+                    <i class="ph-bold ph-compass"></i> Culture & Values
+                  </span>
+                  <span class="text-[10px] text-slate-400 font-semibold">Page 5</span>
+                </div>
+
+                <h2 class="text-base sm:text-lg font-bold text-htg-deep leading-tight">Our 8 Leadership Principles</h2>
+                <p class="text-[10px] text-slate-500 mb-2">How we think, build, and operate everyday</p>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2 text-[10px] flex-1 py-1">
+                <div class="p-2 rounded-lg bg-white border border-purple-100 shadow-sm flex flex-col justify-between">
+                  <strong class="text-htg-deep block font-bold leading-tight">1. Make Customers Successful</strong>
+                  <span class="text-slate-500 text-[9px] mt-1">Start with travelers and hosts; build backward.</span>
+                </div>
+                <div class="p-2 rounded-lg bg-white border border-purple-100 shadow-sm flex flex-col justify-between">
+                  <strong class="text-htg-deep block font-bold leading-tight">2. Bias for Results</strong>
+                  <span class="text-slate-500 text-[9px] mt-1">Focus on tangible, measurable business outcomes.</span>
+                </div>
+                <div class="p-2 rounded-lg bg-white border border-purple-100 shadow-sm flex flex-col justify-between">
+                  <strong class="text-htg-deep block font-bold leading-tight">3. Always Responsible</strong>
+                  <span class="text-slate-500 text-[9px] mt-1">Take ownership from end to end without blame.</span>
+                </div>
+                <div class="p-2 rounded-lg bg-white border border-purple-100 shadow-sm flex flex-col justify-between">
+                  <strong class="text-htg-deep block font-bold leading-tight">4. Act Entrepreneurial</strong>
+                  <span class="text-slate-500 text-[9px] mt-1">Spot opportunities and operate like an owner.</span>
+                </div>
+                <div class="p-2 rounded-lg bg-white border border-purple-100 shadow-sm flex flex-col justify-between">
+                  <strong class="text-htg-deep block font-bold leading-tight">5. Reduce Complexity</strong>
+                  <span class="text-slate-500 text-[9px] mt-1">Simplify processes and eliminate friction.</span>
+                </div>
+                <div class="p-2 rounded-lg bg-white border border-purple-100 shadow-sm flex flex-col justify-between">
+                  <strong class="text-htg-deep block font-bold leading-tight">6. Hire & Develop Best</strong>
+                  <span class="text-slate-500 text-[9px] mt-1">Raise the talent bar with every conversation.</span>
+                </div>
+                <div class="p-2 rounded-lg bg-white border border-purple-100 shadow-sm flex flex-col justify-between">
+                  <strong class="text-htg-deep block font-bold leading-tight">7. Enable Each Other</strong>
+                  <span class="text-slate-500 text-[9px] mt-1">Break silos, share learning, win as one team.</span>
+                </div>
+                <div class="p-2 rounded-lg bg-white border border-purple-100 shadow-sm flex flex-col justify-between">
+                  <strong class="text-htg-deep block font-bold leading-tight">8. Lead with AI</strong>
+                  <span class="text-slate-500 text-[9px] mt-1">Harness modern AI tools to augment workflows daily.</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="pt-2 border-t border-purple-100 flex items-center justify-between text-[10px] text-slate-400 mt-2">
+              <span>Principles in Practice</span>
+              <span>5 of 8</span>
+            </div>
+            <div class="curl-hint"></div>
+          </div>
+
+          <!-- Page 6: Interview Journey (Spread out) -->
+          <div class="leaf-face leaf-back bg-htg-paper text-slate-800 p-4 sm:p-5 flex flex-col justify-between border-l border-purple-200 h-full">
+            <div class="flex-1 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between border-b border-purple-100 pb-1.5 mb-2">
+                  <span class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-htg-purple flex items-center gap-1">
+                    <i class="ph-bold ph-path"></i> Process Map
+                  </span>
+                  <span class="text-[10px] text-slate-400 font-semibold">Page 6</span>
+                </div>
+
+                <h2 class="text-base sm:text-lg font-bold text-htg-deep">Your interview journey</h2>
+                <p class="text-[10px] text-slate-500 mb-2">Clear timeline, predictable milestones</p>
+
+                <!-- Current Step Spotlight -->
+                <div class="p-2.5 rounded-xl bg-gradient-to-r from-htg-deep to-htg-purple text-white shadow-sm mb-2.5">
+                  <div class="flex items-center justify-between text-[8px] font-extrabold uppercase text-amber-300">
+                    <span>Stage 2 · Up Next</span>
+                    <span>45–60 min · Video</span>
+                  </div>
+                  <div class="text-xs font-bold mt-0.5">Hiring Manager Interview</div>
+                  <p class="text-[10px] text-purple-200">With <strong class="text-white dynHMName">Elena Rossi</strong></p>
+                  <p class="text-[8px] text-purple-100/70 mt-1">Focus: Past achievements, role challenges & two-way questions.</p>
+                </div>
+              </div>
+
+              <!-- Journey Steps -->
+              <div class="flex-1 flex flex-col justify-between py-1 border-l-2 border-purple-200 ml-2 pl-3 text-[10px] space-y-1">
+                <div class="text-slate-400 flex items-center justify-between">
+                  <div class="flex items-center">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 -ml-[17px] mr-2 flex items-center justify-center text-white text-[7px] font-bold">✓</span>
+                    <span>1. Recruiter Screen</span>
+                  </div>
+                  <span class="text-[8px] text-emerald-600 bg-emerald-50 px-1 rounded font-semibold">Done</span>
+                </div>
+
+                <div class="font-bold text-htg-purple flex items-center justify-between">
+                  <div class="flex items-center">
+                    <span class="w-2.5 h-2.5 rounded-full bg-htg-purple -ml-[17px] mr-2 ring-4 ring-purple-200"></span>
+                    <span>2. Hiring Manager Interview</span>
+                  </div>
+                  <span class="text-[8px] text-htg-purple bg-purple-100 px-1 rounded font-bold">Current</span>
+                </div>
+
+                <div class="text-slate-600 flex items-center justify-between">
+                  <div class="flex items-center">
+                    <span class="w-2 h-2 rounded-full bg-slate-300 -ml-[16px] mr-2.5"></span>
+                    <span>3. Practical Skills Task</span>
+                  </div>
+                  <span class="text-[8px] text-slate-400">Take-home</span>
+                </div>
+
+                <div class="text-slate-600 flex items-center justify-between">
+                  <div class="flex items-center">
+                    <span class="w-2 h-2 rounded-full bg-slate-300 -ml-[16px] mr-2.5"></span>
+                    <span>4. Cross-Functional Deep Dive</span>
+                  </div>
+                  <span class="text-[8px] text-slate-400">45 min</span>
+                </div>
+
+                <div class="text-slate-600 flex items-center justify-between">
+                  <div class="flex items-center">
+                    <span class="w-2 h-2 rounded-full bg-slate-300 -ml-[16px] mr-2.5"></span>
+                    <span>5. Team Culture & Peers</span>
+                  </div>
+                  <span class="text-[8px] text-slate-400">30 min</span>
+                </div>
+
+                <div class="text-slate-600 flex items-center justify-between">
+                  <div class="flex items-center">
+                    <span class="w-2 h-2 rounded-full bg-slate-300 -ml-[16px] mr-2.5"></span>
+                    <span>6. Executive Bar Raiser</span>
+                  </div>
+                  <span class="text-[8px] text-slate-400">30 min</span>
+                </div>
+
+                <div class="text-emerald-700 font-semibold flex items-center justify-between pt-1 border-t border-purple-100">
+                  <div class="flex items-center">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 -ml-[16px] mr-2.5"></span>
+                    <span>7. Fast Final Decision</span>
+                  </div>
+                  <span class="text-[8px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-bold">3–5 Days</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="pt-2 border-t border-purple-100 flex items-center justify-between text-[10px] text-slate-400 mt-2">
+              <span class="text-purple-600 font-semibold cursor-pointer" onclick="prevLeaf(event)">← Previous Page</span>
+              <span>6 of 8</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- LEAF 4: Front: Candidate Tips (Page 7) / Back: Life & Back Cover (Page 8) -->
+        <div id="leaf4" class="book-leaf" style="z-index: 1;" onclick="handleLeafClick(4, event)">
+          <div class="leaf-shade"></div>
+
+          <!-- Page 7: Candidate Tips (Spread out) -->
+          <div class="leaf-face leaf-front bg-htg-paper text-slate-800 p-4 sm:p-5 flex flex-col justify-between border-r border-purple-200 h-full">
+            <div class="flex-1 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between border-b border-purple-100 pb-1.5 mb-2">
+                  <span class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-htg-purple flex items-center gap-1">
+                    <i class="ph-bold ph-lightbulb"></i> Candidate Tips
+                  </span>
+                  <span class="text-[10px] text-slate-400 font-semibold">Page 7</span>
+                </div>
+
+                <h2 class="text-base sm:text-lg font-bold text-htg-deep leading-tight">Four things that help people do well</h2>
+                <p class="text-[10px] text-slate-500 mb-2">Actionable advice for your upcoming conversation</p>
+              </div>
+
+              <div class="space-y-2.5 flex-1 flex flex-col justify-between py-1">
+                <div class="p-3 rounded-xl bg-white border border-purple-100 shadow-sm flex-1 flex flex-col justify-center">
+                  <div class="font-bold text-htg-deep text-xs flex items-center">
+                    <span class="w-4 h-4 rounded-full bg-purple-100 text-htg-purple flex items-center justify-center text-[10px] font-extrabold mr-1.5">1</span>
+                    Revisit the role
+                  </div>
+                  <p class="text-[10px] text-slate-600 mt-1 leading-snug">Pick 2–3 key outcomes that matter most to this position and reflect on how you’d tackle them from day one.</p>
+                </div>
+
+                <div class="p-3 rounded-xl bg-white border border-purple-100 shadow-sm flex-1 flex flex-col justify-center">
+                  <div class="font-bold text-htg-deep text-xs flex items-center">
+                    <span class="w-4 h-4 rounded-full bg-purple-100 text-htg-purple flex items-center justify-center text-[10px] font-extrabold mr-1.5">2</span>
+                    Bring real, concrete examples
+                  </div>
+                  <p class="text-[10px] text-slate-600 mt-1 leading-snug">Structure thoughts around the situation, what decisions you made, and measurable impact. Specific beats polished.</p>
+                </div>
+
+                <div class="p-3 rounded-xl bg-white border border-purple-100 shadow-sm flex-1 flex flex-col justify-center">
+                  <div class="font-bold text-htg-deep text-xs flex items-center">
+                    <span class="w-4 h-4 rounded-full bg-purple-100 text-htg-purple flex items-center justify-center text-[10px] font-extrabold mr-1.5">3</span>
+                    Try what we build
+                  </div>
+                  <p class="text-[10px] text-slate-600 mt-1 leading-snug">Plan a stay on HomeToGo or explore our mobile app. Note one feature you loved and one opportunity for improvement.</p>
+                </div>
+
+                <div class="p-3 rounded-xl bg-white border border-purple-100 shadow-sm flex-1 flex flex-col justify-center">
+                  <div class="font-bold text-htg-deep text-xs flex items-center">
+                    <span class="w-4 h-4 rounded-full bg-purple-100 text-htg-purple flex items-center justify-center text-[10px] font-extrabold mr-1.5">4</span>
+                    Bring your honest questions
+                  </div>
+                  <p class="text-[10px] text-slate-600 mt-1 leading-snug">The interview is a two-way dialogue! Ask about team dynamics, product strategy, technical debt, or leadership culture.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="pt-2 border-t border-purple-100 flex items-center justify-between text-[10px] text-slate-400 mt-2">
+              <span class="text-purple-600 font-semibold cursor-pointer" onclick="prevLeaf(event)">← Previous Page</span>
+              <span>7 of 8</span>
+            </div>
+            <div class="curl-hint"></div>
+          </div>
+
+          <!-- Page 8: Life at HomeToGo & Back Cover Spread -->
+          <div class="leaf-face leaf-back bg-gradient-to-br from-htg-eggplant via-htg-deep to-htg-dark text-white p-4 sm:p-5 flex flex-col justify-between border-l-2 border-purple-400/20 relative overflow-hidden h-full">
+            <div class="absolute inset-0 opacity-10 pointer-events-none">
+              <img src="https://images.unsplash.com/photo-1507652313519-d4e9174996dd?auto=format&fit=crop&w=500&q=80" alt="Resort" class="w-full h-full object-cover">
+            </div>
+
+            <div class="relative z-10 flex-1 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between border-b border-white/10 pb-1.5 mb-2">
+                  <span class="text-[9px] font-bold uppercase tracking-widest text-amber-300 flex items-center gap-1">
+                    <i class="ph-bold ph-gift"></i> Life at HomeToGo
+                  </span>
+                  <span class="text-[9px] text-purple-200/60 font-mono">Back Cover</span>
+                </div>
+
+                <h2 class="text-base sm:text-lg font-extrabold text-white leading-tight">
+                  We’re excited to meet you, <span class="dynCandidateFirstName text-amber-400">Alex</span>!
+                </h2>
+                <p class="text-[10px] text-purple-200/90 mt-0.5 leading-snug">
+                  Holistic benefits and a people-first culture built for European tech leaders.
+                </p>
+              </div>
+
+              <!-- 6 Key Benefits Cards -->
+              <div class="grid grid-cols-2 gap-2 text-[10px] my-2">
+                <div class="p-2.5 rounded-xl bg-white/10 backdrop-blur-md border border-purple-300/20">
+                  <div class="font-bold text-amber-300 flex items-center gap-1">✈️ Flexible Hybrid</div>
+                  <p class="text-[8px] text-purple-200 mt-0.5">50% remote + 63 days EU workation allowance.</p>
+                </div>
+
+                <div class="p-2.5 rounded-xl bg-white/10 backdrop-blur-md border border-purple-300/20">
+                  <div class="font-bold text-amber-300 flex items-center gap-1">🏖️ Generous Time Off</div>
+                  <p class="text-[8px] text-purple-200 mt-0.5">27 to 32 vacation days scaling with tenure.</p>
+                </div>
+
+                <div class="p-2.5 rounded-xl bg-white/10 backdrop-blur-md border border-purple-300/20">
+                  <div class="font-bold text-amber-300 flex items-center gap-1">📈 Pay & Equity</div>
+                  <p class="text-[8px] text-purple-200 mt-0.5">Competitive market comp + virtual stock options.</p>
+                </div>
+
+                <div class="p-2.5 rounded-xl bg-white/10 backdrop-blur-md border border-purple-300/20">
+                  <div class="font-bold text-amber-300 flex items-center gap-1">🤖 AI-First Tools</div>
+                  <p class="text-[8px] text-purple-200 mt-0.5">Claude, Copilot, & proprietary LLM agents.</p>
+                </div>
+
+                <div class="p-2.5 rounded-xl bg-white/10 backdrop-blur-md border border-purple-300/20">
+                  <div class="font-bold text-amber-300 flex items-center gap-1">🧘 Well-being</div>
+                  <p class="text-[8px] text-purple-200 mt-0.5">Sports stipend, mental health care & coaching.</p>
+                </div>
+
+                <div class="p-2.5 rounded-xl bg-white/10 backdrop-blur-md border border-purple-300/20">
+                  <div class="font-bold text-amber-300 flex items-center gap-1">🚆 Relocation & Transit</div>
+                  <p class="text-[8px] text-purple-200 mt-0.5">Deutschland-Ticket, visa support & bikes.</p>
+                </div>
+              </div>
+
+              <!-- Vacation Villa Hero Banner -->
+              <div class="rounded-xl overflow-hidden border border-purple-300/30 relative h-20 shadow-inner group">
+                <img src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=600&q=80" 
+                     alt="Vacation Villa Stay" 
+                     class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                <div class="absolute inset-0 bg-gradient-to-t from-htg-night/90 via-htg-night/40 to-transparent flex items-end p-2">
+                  <span class="text-[9px] text-purple-200/90 font-medium flex items-center gap-1.5">
+                    <i class="ph-bold ph-sparkle text-amber-400"></i> See you on the other side of the screen!
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Footer Links -->
+            <div class="relative z-10 pt-2 border-t border-white/10 mt-1">
+              <div class="flex items-center justify-between text-[10px] text-purple-300/80 mb-0.5">
+                <span>Explore:</span>
+                <div class="space-x-2 text-white font-semibold text-[10px]">
+                  <a href="https://www.hometogo.com" target="_blank" class="hover:text-amber-400 transition">Website</a>
+                  <span>·</span>
+                  <a href="https://www.linkedin.com/company/hometogo" target="_blank" class="hover:text-amber-400 transition">LinkedIn</a>
+                </div>
+              </div>
+              <div class="text-[8px] text-purple-400/60 text-center font-medium">
+                HomeToGo Group · European Vacation Rentals Powerhouse
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- BOTTOM FLOATING CONTROLS -->
+    <nav class="z-40 mt-2 sm:mt-3 flex items-center justify-center space-x-2 text-white">
+      <button id="btnPrev" onclick="prevLeaf()" class="px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl bg-htg-dark/90 hover:bg-htg-purple text-purple-200 hover:text-white border border-purple-500/30 text-[10px] sm:text-xs font-semibold flex items-center space-x-1 transition disabled:opacity-30 disabled:pointer-events-none shadow-md">
+        <i class="ph-bold ph-caret-left"></i>
+        <span>Previous</span>
+      </button>
+
+      <div class="px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl bg-htg-eggplant/90 border border-purple-500/30 text-center shadow-lg">
+        <span id="pageIndicator" class="text-[10px] sm:text-xs font-bold text-white tracking-wide">Cover (Front)</span>
+      </div>
+
+      <button id="btnNext" onclick="nextLeaf()" class="px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl bg-gradient-to-r from-htg-purple to-htg-electric hover:from-purple-600 hover:to-htg-lilac text-white text-[10px] sm:text-xs font-semibold flex items-center space-x-1 transition disabled:opacity-30 disabled:pointer-events-none shadow-md">
+        <span>Turn Page</span>
+        <i class="ph-bold ph-caret-right"></i>
+      </button>
+    </nav>
+
+  </main>
+
+  <script>
+    const leaves = [
+      document.getElementById('leaf1'),
+      document.getElementById('leaf2'),
+      document.getElementById('leaf3'),
+      document.getElementById('leaf4')
+    ];
+    const totalLeaves = leaves.length;
+    const totalPages = 8;
+    let currentPage = 1;
+    let currentFlippedCount = 0;
+    let isSoundMuted = false;
+    let isForcedMobile = false;
+
+    const pageTitles = [
+      "Page 1: Cover",
+      "Page 2: Recruiter Note",
+      "Page 3: Who We Are",
+      "Page 4: Our Brands",
+      "Page 5: Leadership Principles",
+      "Page 6: Interview Journey",
+      "Page 7: How to Prepare",
+      "Page 8: Life at HomeToGo"
+    ];
+
+    const spreadTitles = [
+      "Cover",
+      "Pages 2 – 3",
+      "Pages 4 – 5",
+      "Pages 6 – 7",
+      "Back Cover"
+    ];
+
+    function isPhoneMode() {
+      return window.innerWidth < 860 || isForcedMobile;
+    }
+
+    function toggleViewportMode() {
+      const main = document.getElementById('mainContainer');
+      const label = document.getElementById('viewToggleLabel');
+      const icon = document.getElementById('viewToggleIcon');
+      
+      isForcedMobile = !isForcedMobile;
+      if (isForcedMobile) {
+        main.classList.add('mobile-frame-mode');
+        label.textContent = "Spread Mode";
+        icon.className = "ph-bold ph-desktop";
+      } else {
+        main.classList.remove('mobile-frame-mode');
+        label.textContent = "Phone Mode";
+        icon.className = "ph-bold ph-device-mobile";
+      }
+      updateBookLayout();
+    }
+
+    let audioCtx = null;
+    function playPaperTurnSound() {
+      if (isSoundMuted) return;
+      try {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+
+        const duration = 0.14;
+        const bufferSize = audioCtx.sampleRate * duration;
+        const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const output = buffer.getChannelData(0);
+        
+        for (let i = 0; i < bufferSize; i++) {
+          const t = i / bufferSize;
+          const envelope = Math.sin(t * Math.PI) * Math.exp(-t * 2.5);
+          output[i] = (Math.random() * 2 - 1) * envelope;
+        }
+
+        const whiteNoise = audioCtx.createBufferSource();
+        whiteNoise.buffer = buffer;
+
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(1200, audioCtx.currentTime);
+        filter.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + duration);
+        filter.Q.value = 1.2;
+
+        const gainNode = audioCtx.createGain();
+        gainNode.gain.setValueAtTime(0.18, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.005, audioCtx.currentTime + duration);
+
+        whiteNoise.connect(filter);
+        filter.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        whiteNoise.start();
+      } catch (e) {}
+    }
+
+    function toggleSound() {
+      isSoundMuted = !isSoundMuted;
+      const icon = document.getElementById('soundIcon');
+      if (isSoundMuted) {
+        icon.className = 'ph-bold ph-speaker-slash text-xs text-purple-400';
+      } else {
+        icon.className = 'ph-bold ph-speaker-high text-xs';
+      }
+    }
+
+    function updateBookLayout() {
+      const bookWrapper = document.getElementById('bookWrapper');
+      const inPhone = isPhoneMode();
+
+      if (inPhone) {
+        document.body.classList.add('phone-mode-active');
+        bookWrapper.className = 'book-wrapper';
+
+        const activeLeafIndex = Math.floor((currentPage - 1) / 2);
+        const isBackFace = (currentPage % 2 === 0);
+
+        leaves.forEach((leaf, idx) => {
+          leaf.classList.remove('leaf-hidden', 'leaf-turned', 'flipped');
+          if (idx < activeLeafIndex) {
+            leaf.classList.add('leaf-turned');
+            leaf.style.zIndex = idx + 1;
+          } else if (idx === activeLeafIndex) {
+            if (isBackFace) {
+              leaf.classList.add('leaf-turned');
+            } else {
+              leaf.classList.remove('leaf-turned');
+            }
+            leaf.style.zIndex = 30;
+          } else {
+            leaf.style.zIndex = totalLeaves - idx;
+          }
+        });
+
+        document.getElementById('btnPrev').disabled = (currentPage === 1);
+        document.getElementById('btnNext').disabled = (currentPage === totalPages);
+        document.getElementById('pageIndicator').textContent = `${pageTitles[currentPage - 1]} (${currentPage}/8)`;
+      } else {
+        document.body.classList.remove('phone-mode-active');
+
+        currentFlippedCount = Math.floor(currentPage / 2);
+
+        if (currentFlippedCount === 0) {
+          bookWrapper.className = 'book-wrapper is-closed';
+        } else if (currentFlippedCount === totalLeaves) {
+          bookWrapper.className = 'book-wrapper is-back-closed';
+        } else {
+          bookWrapper.className = 'book-wrapper is-open';
+        }
+
+        leaves.forEach((leaf, idx) => {
+          leaf.classList.remove('leaf-hidden', 'leaf-turned');
+          if (idx < currentFlippedCount) {
+            leaf.classList.add('flipped');
+            leaf.style.zIndex = idx + 1;
+          } else {
+            leaf.classList.remove('flipped');
+            leaf.style.zIndex = totalLeaves - idx;
+          }
+        });
+
+        document.getElementById('btnPrev').disabled = (currentFlippedCount === 0);
+        document.getElementById('btnNext').disabled = (currentFlippedCount === totalLeaves);
+        document.getElementById('pageIndicator').textContent = spreadTitles[currentFlippedCount];
+      }
+    }
+
+    function nextLeaf() {
+      const inPhone = isPhoneMode();
+      if (inPhone) {
+        if (currentPage < totalPages) {
+          const currentLeafIndex = Math.floor((currentPage - 1) / 2);
+          const leaf = leaves[currentLeafIndex];
+          leaf.classList.add('turning');
+          currentPage++;
+          playPaperTurnSound();
+          updateBookLayout();
+          setTimeout(() => leaf.classList.remove('turning'), 850);
+        }
+      } else {
+        if (currentFlippedCount < totalLeaves) {
+          const leaf = leaves[currentFlippedCount];
+          leaf.classList.add('turning');
+          currentFlippedCount++;
+          currentPage = currentFlippedCount * 2 + 1;
+          playPaperTurnSound();
+          updateBookLayout();
+          setTimeout(() => leaf.classList.remove('turning'), 850);
+        }
+      }
+    }
+
+    function prevLeaf(e) {
+      if (e) e.stopPropagation();
+      const inPhone = isPhoneMode();
+      if (inPhone) {
+        if (currentPage > 1) {
+          currentPage--;
+          const activeLeafIndex = Math.floor((currentPage - 1) / 2);
+          const leaf = leaves[activeLeafIndex];
+          leaf.classList.add('turning');
+          playPaperTurnSound();
+          updateBookLayout();
+          setTimeout(() => leaf.classList.remove('turning'), 850);
+        }
+      } else {
+        if (currentFlippedCount > 0) {
+          currentFlippedCount--;
+          currentPage = currentFlippedCount * 2;
+          const leaf = leaves[currentFlippedCount];
+          leaf.classList.add('turning');
+          playPaperTurnSound();
+          updateBookLayout();
+          setTimeout(() => leaf.classList.remove('turning'), 850);
+        }
+      }
+    }
+
+    function handleLeafClick(leafNum, event) {
+      const inPhone = isPhoneMode();
+      if (inPhone) {
+        nextLeaf();
+      } else {
+        const leafIndex = leafNum - 1;
+        if (leafIndex < currentFlippedCount) {
+          prevLeaf(event);
+        } else {
+          nextLeaf();
+        }
+      }
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'ArrowDown') {
+        nextLeaf();
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        prevLeaf();
+      }
+    });
+
+    let touchStartX = 0;
+    let touchEndX = 0;
+    const stage = document.querySelector('.book-stage');
+
+    stage.addEventListener('touchstart', (e) => {
+      touchStartX = e.changedTouches[0].screenX;
+    }, { passive: true });
+
+    stage.addEventListener('touchend', (e) => {
+      touchEndX = e.changedTouches[0].screenX;
+      handleSwipe();
+    }, { passive: true });
+
+    function handleSwipe() {
+      const diffX = touchEndX - touchStartX;
+      if (diffX < -40) {
+        nextLeaf();
+      } else if (diffX > 40) {
+        prevLeaf();
+      }
+    }
+
+    function togglePersonalizer() {
+      const drawer = document.getElementById('personalizeDrawer');
+      drawer.classList.toggle('hidden');
+    }
+
+    function handlePersonalize() {
+      const candidate = document.getElementById('inpCandidate').value || 'Alex Taylor';
+      const role = document.getElementById('inpRole').value || 'Senior Product Manager';
+      const hm = document.getElementById('inpHM').value || 'Elena Rossi, VP Product';
+      const recruiter = document.getElementById('inpRecruiter').value || 'Sarah Jenkins';
+
+      const firstName = candidate.trim().split(' ')[0] || 'there';
+
+      document.querySelectorAll('.dynCandidateName').forEach(el => el.textContent = candidate);
+      document.querySelectorAll('.dynCandidateFirstName').forEach(el => el.textContent = firstName);
+      document.querySelectorAll('.dynRoleTitle').forEach(el => el.textContent = role);
+      document.querySelectorAll('.dynHMName').forEach(el => el.textContent = hm);
+      document.querySelectorAll('.dynRecruiterName').forEach(el => el.textContent = recruiter);
+    }
+
+    function copyCandidateUrl() {
+      const candidate = encodeURIComponent(document.getElementById('inpCandidate').value.trim());
+      const role = encodeURIComponent(document.getElementById('inpRole').value.trim());
+      const hm = encodeURIComponent(document.getElementById('inpHM').value.trim());
+      const recruiter = encodeURIComponent(document.getElementById('inpRecruiter').value.trim());
+
+      const url = `${window.location.origin}${window.location.pathname}?name=${candidate}&role=${role}&hm=${hm}&recruiter=${recruiter}`;
+
+      navigator.clipboard.writeText(url).then(() => {
+        const feedback = document.getElementById('copyFeedback');
+        feedback.classList.remove('hidden');
+        setTimeout(() => feedback.classList.add('hidden'), 2500);
+      });
+    }
+
+    function applyParametersFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const name = params.get('name');
+      const role = params.get('role');
+      const hm = params.get('hm');
+      const recruiter = params.get('recruiter');
+
+      if (name) document.getElementById('inpCandidate').value = decodeURIComponent(name);
+      if (role) document.getElementById('inpRole').value = decodeURIComponent(role);
+      if (hm) document.getElementById('inpHM').value = decodeURIComponent(hm);
+      if (recruiter) document.getElementById('inpRecruiter').value = decodeURIComponent(recruiter);
+
+      handlePersonalize();
+    }
+
+    window.addEventListener('resize', updateBookLayout);
+
+    window.onload = function() {
+      applyParametersFromUrl();
+      updateBookLayout();
+    };
+  </script>
+</body>
+</html>
